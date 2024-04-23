@@ -1,0 +1,150 @@
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
+from mlxtend.plotting import plot_confusion_matrix
+from sklearn import metrics
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import random
+%matplotlib inline
+from tqdm.notebook import tqdm
+import warnings
+warnings.filterwarnings("ignore")
+
+
+
+
+def load_and_preprocess_data():
+    (trainX, trainY), (testX, testY) = tf.keras.datasets.fashion_mnist.load_data()
+
+    trainX = trainX.reshape((trainX.shape[0], 28, 28, 1))
+    testX = testX.reshape((testX.shape[0], 28, 28, 1))
+
+    trainY_cat = tf.keras.utils.to_categorical(trainY)
+    testY_cat = tf.keras.utils.to_categorical(testY)
+
+    train_norm = trainX.astype('float32') / 255.0
+    test_norm = testX.astype('float32') / 255.0
+
+    return train_norm, trainY_cat, test_norm, testY_cat
+
+
+
+
+
+
+    def create_cnn_model():
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Conv2D(64, kernel_size=(3, 3), input_shape=(28, 28, 1), activation='relu', padding='same', name='conv-layer-1'),
+        tf.keras.layers.AvgPool2D(pool_size=(2, 2), name='pooling-layer-1'),
+        tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu', padding='same', name='conv-layer-2'),
+        tf.keras.layers.AvgPool2D(pool_size=(2, 2), name='pooling-layer-2'),
+        tf.keras.layers.GlobalAveragePooling2D(name='pooling-layer-3'),
+        tf.keras.layers.Dense(10, activation="softmax", name="output-layer")
+    ])
+
+    model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+    return model
+
+
+
+
+
+
+
+    def train_model(model, trainX, trainY_cat, testX, testY_cat, epochs=10):
+    history = model.fit(trainX, trainY_cat, epochs=epochs, validation_data=(testX, testY_cat))
+    return history
+
+
+
+
+
+
+    def evaluate_model(model, testX, testY_cat):
+    accuracy = model.evaluate(testX, testY_cat)[1]
+
+    predictions = model.predict(testX)
+    predicted_labels = np.argmax(predictions, axis=1)
+    true_labels = np.argmax(testY_cat, axis=1)
+
+    classification_report_str = metrics.classification_report(true_labels, predicted_labels)
+    confusion_matrix_arr = metrics.confusion_matrix(true_labels, predicted_labels)
+
+    return accuracy, classification_report_str, confusion_matrix_arr
+
+
+
+
+
+def visualize_random_predictions(model, testX, testY_cat, class_names):
+    images = []
+    labels = []
+    random_indices = random.sample(range(len(testX)), 10)
+    
+    for idx in random_indices:
+        images.append(testX[idx])
+        labels.append(testY_cat[idx])
+
+    images = np.array(images)
+    labels = np.array(labels)
+
+    fig = plt.figure(figsize=(20, 8))
+    rows, cols = 2, 5
+    x = 1
+
+    for image, label in zip(images, labels):
+        fig.add_subplot(rows, cols, x)
+        prediction = model.predict(tf.expand_dims(image, axis=0))
+        predicted_label = class_names[tf.argmax(prediction.flatten())]
+        true_label = class_names[tf.argmax(label)]
+        plt.title(f"True Label: {true_label}, Predicted Label: {predicted_label}")
+        plt.imshow(image/255.)
+        plt.axis("off")
+        x += 1
+
+
+
+
+
+
+
+        trainX, trainY_cat, testX, testY_cat = load_and_preprocess_data()
+class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+model = create_cnn_model()
+history = train_model(model, trainX, trainY_cat, testX, testY_cat, epochs=10)
+accuracy, classification_report_str, confusion_matrix_arr = evaluate_model(model, testX, testY_cat)
+
+
+
+
+
+
+
+
+
+visualize_random_predictions(model, testX, testY_cat, class_names)
+
+
+
+
+
+
+
+
+print(f"Accuracy: {accuracy:.4f}")
+print("\nClassification Report:\n", classification_report_str)
+print("\nConfusion Matrix:\n", confusion_matrix_arr)
+
+
+
+
+
+
+
+
+
+
+
+    
